@@ -8,6 +8,7 @@
  *
  * ------------------------------ REVISION HISTORY -----------------------------
  * Dec 10, 2022 - Updated file template
+ *              - Added GPIO sample - LED blinking
  * -----------------------------------------------------------------------------
  */
 
@@ -19,6 +20,7 @@
 /*******************************************************************************
  * 2. Object-like Macros
  ******************************************************************************/
+#define SAMPLE_GPIO
 
 /*******************************************************************************
  * 3. Function-like Macros
@@ -27,7 +29,11 @@
 /*******************************************************************************
  * 4. Typedefs: Enumerations, Structures, Unions, Pointers, Others
  ******************************************************************************/
-
+typedef struct
+{
+	GPIO_TypeDef  *Port;	/* Port */
+	uint32_t Pin;			/* Pin */
+} GPIO_PortPin;
 /*******************************************************************************
  * 5. Global, Static, Constant, Extern Variables and Extern Functions
  ******************************************************************************/
@@ -42,9 +48,33 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+  GPIO_PortPin LEDPin = {GPIOA, GPIO_PIN_4};
   HAL_Init(); // Reset of all peripherals, Initializes the Flash interface and the Systick
   SystemClock_Config(); // Configure the system clock
-  while (1)
+
+  /**
+    * GPIO sample
+    */
+#ifdef  SAMPLE_GPIO
+  __GPIOA_CLK_ENABLE();
+
+  GPIO_InitTypeDef gpioStruct = {0};
+  gpioStruct.Pin = GPIO_PIN_4; //
+  gpioStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  gpioStruct.Pull = GPIO_NOPULL;
+  gpioStruct.Speed = GPIO_SPEED_FREQ_LOW;
+//  gpioStruct.Alternate = ;
+
+  HAL_GPIO_Init(LEDPin.Port, &gpioStruct);
+
+  while(1)
+  {
+    HAL_GPIO_TogglePin(LEDPin.Port, LEDPin.Pin);
+    HAL_Delay(1000); // Delay 1000ms
+  }
+#endif /* SAMPLE_GPIO */
+
+  while(1)
   {
 
   }
