@@ -7,10 +7,10 @@
  *  @version V1.0
  *
  * ------------------------------ REVISION HISTORY -----------------------------
- * Dec 12, 2022 - Initialize the main.c file
- * 				- Added LED blinking sample with minimum code size
- * 				text	data	bss		dec		hex		filename
- * 				130		0		0		130		82		STM32F030_Minimal.elf
+ * Dec 12, 2022 - Initialized the main.c file
+ *              - Added LED blinking sample with minimum code size
+ *              text    data    bss     dec     hex     filename
+ *              142     0       0       142     8e      STM32F030_Minimal.elf
  *              
  * -----------------------------------------------------------------------------
  */
@@ -87,9 +87,9 @@ int main(void)
 
 	while(1)
 	{
-			*GPIOA_BSRR = 1 << 4; // Set PA4
+			*GPIOA_BSRR |= 1 << 4; // Set PA4
 			delay(1000000); // Delay 1000000 ticks
-			*GPIOA_BRR = 1 << 4; // Reset PA4
+			*GPIOA_BRR |= 1 << 4; // Reset PA4
 			delay(1000000);
 	}
 }
