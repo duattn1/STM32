@@ -9,9 +9,7 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include Drivers/STM32F0xx_HAL_Driver/Src/subdir.mk
--include Core/Startup/subdir.mk
--include Core/Src/subdir.mk
+-include Src/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
@@ -34,23 +32,23 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := STM32F030
+BUILD_ARTIFACT_NAME := STM32F030_Minimal
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-STM32F030.elf \
+STM32F030_Minimal.elf \
 
 MAP_FILES += \
-STM32F030.map \
+STM32F030_Minimal.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-STM32F030.list \
+STM32F030_Minimal.list \
 
 
 # All Target
@@ -58,11 +56,11 @@ all:
 	+@$(MAKE) --no-print-directory main-build && $(MAKE) --no-print-directory post-build
 
 # Main-build Target
-main-build: STM32F030.elf secondary-outputs
+main-build: STM32F030_Minimal.elf secondary-outputs
 
 # Tool invocations
-STM32F030.elf STM32F030.map: $(OBJS) $(USER_OBJS) D:\STM32F030\01_Project\STM32F030\STM32F030F4PX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "STM32F030.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"D:\STM32F030\01_Project\STM32F030\STM32F030F4PX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32F030.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+STM32F030_Minimal.elf STM32F030_Minimal.map: $(OBJS) $(USER_OBJS) D:\STM32F030\01_Project\STM32F030_Minimal\STM32F030F4PX_minimal.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "STM32F030_Minimal.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"D:\STM32F030\01_Project\STM32F030_Minimal\STM32F030F4PX_minimal.ld" --specs=nosys.specs -Wl,-Map="STM32F030_Minimal.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -71,18 +69,18 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-STM32F030.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "STM32F030.list"
+STM32F030_Minimal.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "STM32F030_Minimal.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) STM32F030.elf STM32F030.list STM32F030.map default.size.stdout
+	-$(RM) STM32F030_Minimal.elf STM32F030_Minimal.list STM32F030_Minimal.map default.size.stdout
 	-@echo ' '
 
 post-build:
-	arm-none-eabi-objcopy -O ihex STM32F030.elf STM32F030.hex
+	arm-none-eabi-objcopy -O ihex STM32F030_Minimal.elf STM32F030_Minimal.hex
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
