@@ -9,75 +9,29 @@
  * ------------------------------ REVISION HISTORY -----------------------------
  * Dec 12, 2022 - Initialized the main.c file
  *              - Added LED blinking sample with minimum code size
- *              text    data    bss     dec     hex     filename
- *              142     0       0       142     8e      STM32F030_Minimal.elf
  *              - Added minimal USART sample
  * Dec 13, 2022 - Corrected baudrate number and selected pins for USART sample
  *              - Added minimal SPI sample
- *              
+ * Dec 14, 2022 - Moved STM32F030F4P6 addresses specification into 
+ *              a new header file (stm32f030f4p6.h)
+ *              - Added GPIO external interrupt sample
  * -----------------------------------------------------------------------------
  */
 
 /*******************************************************************************
  * 1. Included Files
  ******************************************************************************/
+#include "stm32f030f4p6.h"
 #include "MAX7219.h"
 #include "system_typedef.h"
 
 /*******************************************************************************
  * 2. Object-like Macros
  ******************************************************************************/
-/* Memory and peripheral start addresses */
-#define FLASH_BASE			0x08000000
-#define SRAM_BASE			0x20000000
-#define PERIPH_BASE			0x40000000
-#define APBPERIPH_BASE		(PERIPH_BASE + 0x00000000)
-#define AHB1PERIPH_BASE		(PERIPH_BASE + 0x00020000)
-#define AHB2PERIPH_BASE		(PERIPH_BASE + 0x08000000)
-
-/* Work out end of RAM address as initial stack pointer(specific of a given STM32 MCU */
-#define SRAM_SIZE 4*1024 // STM32F030F4P6 has 4 KB of RAM
-#define SRAM_END (SRAM_BASE + SRAM_SIZE)
-
-/* RCC peripheral addresses applicable to GPIOA */
-#define RCC_BASE	(AHB1PERIPH_BASE + 0x00001000)
-#define RCC_AHBENR	((uint32_t*)(RCC_BASE + 0x14))
-#define RCC_APB2ENR	((uint32_t*)(RCC_BASE + 0x18))
-
-
-/* GPIOA peripheral addresses */
-#define GPIOA_BASE		(AHB2PERIPH_BASE + 0x00000000) // All GPIO port, including GPIOA, connect to AHB2 bus
-#define GPIOA_MODER		((uint32_t*)(GPIOA_BASE + 0x00))
-//#define GPIOA_OTYPER	((uint32_t*)(GPIOA_BASE + 0x04))
-//#define GPIOA_OSPEEDR	((uint32_t*)(GPIOA_BASE + 0x08))
-//#define GPIOA_PUPDR		((uint32_t*)(GPIOA_BASE + 0x0C))
-//#define GPIOA_IDR		((uint32_t*)(GPIOA_BASE + 0x10))
-//#define GPIOA_ODR		((uint32_t*)(GPIOA_BASE + 0x14))
-#define GPIOA_BSRR		((uint32_t*)(GPIOA_BASE + 0x18))
-//#define GPIOA_LCKR		((uint32_t*)(GPIOA_BASE + 0x1C))
-#define GPIOA_AFRL		((uint32_t*)(GPIOA_BASE + 0x20))
-#define GPIOA_AFRH		((uint32_t*)(GPIOA_BASE + 0x24))
-#define GPIOA_BRR		((uint32_t*)(GPIOA_BASE + 0x28))
-
-/* USART peripheral addresses */
-#define USART1_BASE		(APBPERIPH_BASE + 0x00013800) // 0x4001 3800
-#define USART1_CR1		((uint32_t*)(USART1_BASE + 0x00))
-#define USART1_CR2		((uint32_t*)(USART1_BASE + 0x04))
-#define USART1_BRR		((uint32_t*)(USART1_BASE + 0x0C))
-#define USART1_ISR		((uint32_t*)(USART1_BASE + 0x1C))
-#define USART1_ICR		((uint32_t*)(USART1_BASE + 0x20))
-#define USART1_TDR		((uint32_t*)(USART1_BASE + 0x28))
-#define USART_ISR_TXE		(1 << 7) // mask for TXE bit of USART_ISR register
-
-/* SPI peripheral addresses */
-#define SPI1_BASE		(APBPERIPH_BASE + 0x00013000) // 0x4001 3000
-#define SPI1_CR1		((uint32_t*)(SPI1_BASE + 0x00))
-#define SPI1_CR2		((uint32_t*)(SPI1_BASE + 0x04))
-
-
 /* Peripheral sample enable */
-//#define SAMPLE_GPIO
-#define SAMPLE_USART
+//#define SAMPLE1_GPIO
+#define SAMPLE2_GPIO_EXTI
+//#define SAMPLE_USART
 //#define SAMPLE_SPI
 
 /*******************************************************************************
@@ -113,7 +67,7 @@ int main(void)
 {
 	char msg[] = "Hello";
 
-#ifdef  SAMPLE_GPIO
+#ifdef  SAMPLE1_GPIO
 	*RCC_AHBENR |= 1 << 17; // Enable clock for GPIOA
 	/* Configure the integrated LED pin (PA4) as output*/
 	*GPIOA_MODER |= 1 << (4*2); // set MODER4[1:0] bits as 0x01
@@ -124,7 +78,25 @@ int main(void)
 			*GPIOA_BRR |= 1 << 4; // Reset PA4
 			delay(1000000);
 	}
-#endif /* SAMPLE_GPIO */
+#endif /* SAMPLE1_GPIO */
+
+#ifdef  SAMPLE2_GPIO_EXTI
+	*RCC_AHBENR |= 0b1 << 17; // Enable clock for GPIOA
+	/* Configure the LED pin (PA4) as output*/
+	*GPIOA_MODER |= 0b1 << 8; // set MODER4[1:0] bits as 0x01
+
+	/* Configure PA1 and PA2 as pull-up input; Enable external interrupt for these pins
+	 * Default PA1 and PA2 are input, so that no need to update MODER1[1:0] and MODER2[1:0] bits
+	 */
+	*GPIOA_PUPDR |= (0b01 << 2) | (0b01 << 4); // Select pull-up for PUPDR1[1:0] and PUPDR2[1:0]
+
+	//0xE000E100 NVICSER0 register
+
+	while(1)
+	{
+
+	}
+#endif /* SAMPLE2_GPIO_EXTI */
 
 #ifdef  SAMPLE_USART
 	*RCC_AHBENR |= 1 << 17; // Enable clock for GPIOA
@@ -144,7 +116,7 @@ int main(void)
 	 */
 
 	/* When select oversampling by 16, BRR = USARTDIV = f(CK) / Tx/Rx baud */
-	*USART1_BRR = 833; // (48000000/9600) Desired baud rate is 9600
+	*USART1_BRR = 833; // (8000000/9600) Desired baud rate is 9600
 	*USART1_CR1 = (1 << 3) | (1 << 0); // Enable transmission and USART
 	
 	/* Send string "Hello" via USART */
