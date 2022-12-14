@@ -18,9 +18,10 @@
  * 2. Object-like Macros
  ******************************************************************************/
 /* Memory and peripheral start addresses */
-#define FLASH_BASE			0x08000000
-#define SRAM_BASE			0x20000000
-#define PERIPH_BASE			0x40000000
+#define FLASH_BASE				0x08000000
+#define SRAM_BASE				0x20000000
+#define PERIPH_BASE				0x40000000
+#define CORTEXM0_PERIPH_BASE	0xE0000000
 #define APBPERIPH_BASE		(PERIPH_BASE + 0x00000000)
 #define AHB1PERIPH_BASE		(PERIPH_BASE + 0x00020000)
 #define AHB2PERIPH_BASE		(PERIPH_BASE + 0x08000000)
@@ -29,11 +30,38 @@
 #define SRAM_SIZE 4*1024 // STM32F030F4P6 has 4 KB of RAM
 #define SRAM_END (SRAM_BASE + SRAM_SIZE)
 
-/* RCC peripheral addresses applicable to GPIOA */
+/* ARM Cortex-M0 peripheral addresses */
+#define NVIC_ISER		(uint32_t*)0xE000E100
+#define NVIC_ICER		(uint32_t*)0xE000E180
+#define NVIC_ISPR		(uint32_t*)0xE000E200
+#define NVIC_ICPR		(uint32_t*)0xE000E280
+
+/* RCC peripheral addresses */
 #define RCC_BASE	(AHB1PERIPH_BASE + 0x00001000)
 #define RCC_AHBENR	((uint32_t*)(RCC_BASE + 0x14))
 #define RCC_APB2ENR	((uint32_t*)(RCC_BASE + 0x18))
 
+/* Vector table addresses */
+#define EXTI0_1		(void(*)(void))0x00000054
+#define EXTI2_3		(void(*)(void))0x00000058
+
+/* System configuration controller addresses */
+#define SYSCFG_BASE  	(APBPERIPH_BASE + 0x00010000) // 0x4001 0000
+#define SYSCFG_CFGR1	((uint32_t*)(SYSCFG_BASE + 0x00))
+#define SYSCFG_EXTICR1	((uint32_t*)(SYSCFG_BASE + 0x08))
+#define SYSCFG_EXTICR2	((uint32_t*)(SYSCFG_BASE + 0x0C))
+#define SYSCFG_EXTICR3	((uint32_t*)(SYSCFG_BASE + 0x10))
+#define SYSCFG_EXTICR4	((uint32_t*)(SYSCFG_BASE + 0x14))
+#define SYSCFG_CFGR2	((uint32_t*)(SYSCFG_BASE + 0x18))
+
+/* Extended interrupts and events addresses */
+#define EXTI_BASE  	(APBPERIPH_BASE + 0x00010400) // 0x4001 0400
+#define EXTI_IMR	((uint32_t*)(EXTI_BASE + 0x00))
+#define EXTI_EMR	((uint32_t*)(EXTI_BASE + 0x04))
+#define EXTI_RTSR	((uint32_t*)(EXTI_BASE + 0x08))
+#define EXTI_FTSR	((uint32_t*)(EXTI_BASE + 0x0C))
+#define EXTI_SWIER	((uint32_t*)(EXTI_BASE + 0x10))
+#define EXTI_PR		((uint32_t*)(EXTI_BASE + 0x14))
 
 /* GPIOA peripheral addresses */
 #define GPIOA_BASE		(AHB2PERIPH_BASE + 0x00000000) // All GPIO port, including GPIOA, connect to AHB2 bus

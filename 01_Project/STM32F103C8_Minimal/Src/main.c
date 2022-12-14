@@ -48,15 +48,15 @@
 #define GPIOC_BRR		((uint32_t*)(GPIOC_BASE + 0x14))
 #define GPIOC_LCKR		((uint32_t*)(GPIOC_BASE + 0x08))
 
-///* USART peripheral addresses */
-//#define USART1_BASE		(APBPERIPH_BASE + 0x00013800) // 0x4001 3800
-//#define USART1_CR1		((uint32_t*)(USART1_BASE + 0x00))
-//#define USART1_CR2		((uint32_t*)(USART1_BASE + 0x04))
-//#define USART1_BRR		((uint32_t*)(USART1_BASE + 0x0C))
-//#define USART1_ISR		((uint32_t*)(USART1_BASE + 0x1C))
-//#define USART1_ICR		((uint32_t*)(USART1_BASE + 0x20))
-//#define USART1_TDR		((uint32_t*)(USART1_BASE + 0x28))
-//#define USART_ISR_TXE		(1 << 7) // mask for TXE bit of USART_ISR register
+/* USART peripheral addresses */
+#define USART1_BASE		(APB2PERIPH_BASE + 0x00003800) // 0x4001 3800
+#define USART1_CR1		((uint32_t*)(USART1_BASE + 0x00))
+#define USART1_CR2		((uint32_t*)(USART1_BASE + 0x04))
+#define USART1_BRR		((uint32_t*)(USART1_BASE + 0x0C))
+#define USART1_ISR		((uint32_t*)(USART1_BASE + 0x1C))
+#define USART1_ICR		((uint32_t*)(USART1_BASE + 0x20))
+#define USART1_TDR		((uint32_t*)(USART1_BASE + 0x28))
+#define USART_ISR_TXE		(1 << 7) // mask for TXE bit of USART_ISR register
 
 
 /* Peripheral sample enable */
@@ -95,7 +95,7 @@ int main(void)
 #ifdef  SAMPLE_GPIO
 	*RCC_APB2ENR |= 1 << 4; // Enable clock for GPIOC
 
-	/* Configure the integrated LED pin (PC13) as open-drain (default) output, 10Mhz speed */
+	/* Configure LED pin (PC13) as open-drain (default) output, 10Mhz speed */
 	*GPIOC_CRH |= 0b01 << 20; // set MODE13[1:0] bits as 0b01
 
 	while(1)
@@ -108,10 +108,13 @@ int main(void)
 #endif /* SAMPLE_GPIO */
 
 #ifdef  SAMPLE_USART
-	/* Configure the integrated TX pin (PA9) and RX pin (PA10) of USART1 */
-	*GPIOA_MODER |= (0x02 << (2*2)) | (0x02 << (3*2)) ; // select alternate function mode
-	/* To enable USART on PA9 and PA10, select AF1 (refer Alternate functions table in datasheet) */
-	*GPIOA_AFRL |= (0x01 << 8) | (0x01 << 12); // Set AFSEL9[3:0] and AFSEL10[3:0] bits as 0x01
+	/* Configure TX pin (PA9) and RX pin (PA10) of USART1 as alternate function mode
+	 * USART1 pins are selected via USART1_REMAP bit in AFIO_MAPR register, default pins are PA9 and PA10.
+	 * The other selection is PB6 (TX) and PB7 (RX) */
+	*GPIOC_CRH |= (0b01 << 4) | (0b10 << 6); // PA9: set MODE9[1:0] bits as 0b01 and CNF9[1:0] as 0b10
+	*GPIOC_CRH |= (0b01 << 8) | (0b10 << 10); // PA10: set MODE10[1:0] bits as 0b01 and CNF10[1:0] as 0b10
+//	/* To enable USART on PA9 and PA10, select AF1 (refer Alternate functions table in datasheet) */
+//	*GPIOA_AFRL |= (0x01 << 8) | (0x01 << 12); // Set AFSEL9[3:0] and AFSEL10[3:0] bits as 0x01
 
 
 	/* Configure USART */

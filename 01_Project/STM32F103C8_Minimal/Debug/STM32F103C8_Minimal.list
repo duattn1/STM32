@@ -1,0 +1,131 @@
+
+STM32F103C8_Minimal.elf:     file format elf32-littlearm
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000008  08000000  08000000  00010000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .init         00000004  08000008  08000008  00010008  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  2 .fini         00000004  0800000c  0800000c  0001000c  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  3 .text.main    00000058  08000010  08000010  00010010  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  4 .text.delay   00000020  08000068  08000068  00010068  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  5 .ARM.attributes 00000029  00000000  00000000  00010088  2**0
+                  CONTENTS, READONLY
+  6 .comment      00000050  00000000  00000000  000100b1  2**0
+                  CONTENTS, READONLY
+  7 .debug_info   000000af  00000000  00000000  00010101  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  8 .debug_abbrev 000000b3  00000000  00000000  000101b0  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  9 .debug_aranges 00000028  00000000  00000000  00010263  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 10 .debug_ranges 00000018  00000000  00000000  0001028b  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 11 .debug_macro  00000b13  00000000  00000000  000102a3  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 12 .debug_line   0000008f  00000000  00000000  00010db6  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 13 .debug_str    000030ac  00000000  00000000  00010e45  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+ 14 .debug_frame  00000054  00000000  00000000  00013ef4  2**2
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+
+Disassembly of section .init:
+
+08000008 <_init>:
+ 8000008:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+ 800000a:	bf00      	nop
+
+Disassembly of section .fini:
+
+0800000c <_fini>:
+ 800000c:	b5f8      	push	{r3, r4, r5, r6, r7, lr}
+ 800000e:	bf00      	nop
+
+Disassembly of section .text.main:
+
+08000010 <main>:
+ ******************************************************************************/
+/**
+  * @brief  The application entry point.
+  */
+int main(void)
+{
+ 8000010:	b580      	push	{r7, lr}
+ 8000012:	af00      	add	r7, sp, #0
+#ifdef  SAMPLE_GPIO
+	*RCC_APB2ENR |= 1 << 4; // Enable clock for GPIOC
+ 8000014:	4b0f      	ldr	r3, [pc, #60]	; (8000054 <main+0x44>)
+ 8000016:	681b      	ldr	r3, [r3, #0]
+ 8000018:	4a0e      	ldr	r2, [pc, #56]	; (8000054 <main+0x44>)
+ 800001a:	f043 0310 	orr.w	r3, r3, #16
+ 800001e:	6013      	str	r3, [r2, #0]
+
+	/* Configure LED pin (PC13) as open-drain (default) output, 10Mhz speed */
+	*GPIOC_CRH |= 0b01 << 20; // set MODE13[1:0] bits as 0b01
+ 8000020:	4b0d      	ldr	r3, [pc, #52]	; (8000058 <main+0x48>)
+ 8000022:	681b      	ldr	r3, [r3, #0]
+ 8000024:	4a0c      	ldr	r2, [pc, #48]	; (8000058 <main+0x48>)
+ 8000026:	f443 1380 	orr.w	r3, r3, #1048576	; 0x100000
+ 800002a:	6013      	str	r3, [r2, #0]
+
+	while(1)
+	{
+			*GPIOC_BSRR |= 1 << 13; // Set PC13
+ 800002c:	4b0b      	ldr	r3, [pc, #44]	; (800005c <main+0x4c>)
+ 800002e:	681b      	ldr	r3, [r3, #0]
+ 8000030:	4a0a      	ldr	r2, [pc, #40]	; (800005c <main+0x4c>)
+ 8000032:	f443 5300 	orr.w	r3, r3, #8192	; 0x2000
+ 8000036:	6013      	str	r3, [r2, #0]
+			delay(1000000); // Delay 1000000 ticks
+ 8000038:	4809      	ldr	r0, [pc, #36]	; (8000060 <main+0x50>)
+ 800003a:	f000 f815 	bl	8000068 <delay>
+			*GPIOC_BRR |= 1 << 13; // Reset PC13
+ 800003e:	4b09      	ldr	r3, [pc, #36]	; (8000064 <main+0x54>)
+ 8000040:	681b      	ldr	r3, [r3, #0]
+ 8000042:	4a08      	ldr	r2, [pc, #32]	; (8000064 <main+0x54>)
+ 8000044:	f443 5300 	orr.w	r3, r3, #8192	; 0x2000
+ 8000048:	6013      	str	r3, [r2, #0]
+			delay(1000000);
+ 800004a:	4805      	ldr	r0, [pc, #20]	; (8000060 <main+0x50>)
+ 800004c:	f000 f80c 	bl	8000068 <delay>
+			*GPIOC_BSRR |= 1 << 13; // Set PC13
+ 8000050:	e7ec      	b.n	800002c <main+0x1c>
+ 8000052:	bf00      	nop
+ 8000054:	40021018 	.word	0x40021018
+ 8000058:	40011004 	.word	0x40011004
+ 800005c:	40011010 	.word	0x40011010
+ 8000060:	000f4240 	.word	0x000f4240
+ 8000064:	40011014 	.word	0x40011014
+
+Disassembly of section .text.delay:
+
+08000068 <delay>:
+
+/**
+  * @brief  Delay MCU
+  */
+void delay(uint32_t count)
+{
+ 8000068:	b480      	push	{r7}
+ 800006a:	b083      	sub	sp, #12
+ 800006c:	af00      	add	r7, sp, #0
+ 800006e:	6078      	str	r0, [r7, #4]
+	while(count--);
+ 8000070:	bf00      	nop
+ 8000072:	687b      	ldr	r3, [r7, #4]
+ 8000074:	1e5a      	subs	r2, r3, #1
+ 8000076:	607a      	str	r2, [r7, #4]
+ 8000078:	2b00      	cmp	r3, #0
+ 800007a:	d1fa      	bne.n	8000072 <delay+0xa>
+}
+ 800007c:	bf00      	nop
+ 800007e:	bf00      	nop
+ 8000080:	370c      	adds	r7, #12
+ 8000082:	46bd      	mov	sp, r7
+ 8000084:	bc80      	pop	{r7}
+ 8000086:	4770      	bx	lr
