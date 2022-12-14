@@ -84,6 +84,7 @@
 #define USART1_BRR		((uint32_t*)(USART1_BASE + 0x0C))
 #define USART1_ISR		((uint32_t*)(USART1_BASE + 0x1C))
 #define USART1_ICR		((uint32_t*)(USART1_BASE + 0x20))
+#define USART1_RDR		((uint32_t*)(USART1_BASE + 0x24))
 #define USART1_TDR		((uint32_t*)(USART1_BASE + 0x28))
 #define USART_ISR_TXE		(1 << 7) // mask for TXE bit of USART_ISR register
 

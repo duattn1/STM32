@@ -14,6 +14,7 @@
  * Dec 14, 2022 - Moved STM32F030F4P6 addresses specification into 
  *              a new header file (stm32f030f4p6.h)
  *              - Added GPIO external interrupt sample
+ *              - Updated USART sample (polling mode)
  * -----------------------------------------------------------------------------
  */
 
@@ -21,7 +22,6 @@
  * 1. Included Files
  ******************************************************************************/
 #include "stm32f030f4p6.h"
-#include "MAX7219.h"
 #include "system_typedef.h"
 
 /*******************************************************************************
@@ -29,8 +29,8 @@
  ******************************************************************************/
 /* Peripheral sample enable */
 //#define SAMPLE1_GPIO
-#define SAMPLE2_GPIO_EXTI
-//#define SAMPLE3_USART
+//#define SAMPLE2_GPIO_EXTI
+#define SAMPLE3_USART_POLLING
 
 /*******************************************************************************
  * 3. Function-like Macros
@@ -193,34 +193,67 @@ int main(void)
 
 #endif /* SAMPLE2_GPIO_EXTI */
 
-#ifdef  SAMPLE3_USART
+#ifdef  SAMPLE3_USART_POLLING
 	char msg[] = "Hello";
-
-	*RCC_AHBENR |= 1 << 17; // Enable clock for GPIOA
-	/* Configure the integrated TX pin (PA2) and RX pin (PA3) of USART1 */
-	*GPIOA_MODER |= (0b10 << 4) | (0b10 << 6) ; // select alternate function mode
+	char receivedData = 0;
+	/*
+	 * 1. Configure GPIO pin(s): TX pin - PA2, RX pin - PA3
+	 * - Step 1: Enable clock for GPIO port in RCC (Reset and Clock Control) register
+	 * - Step 2: Configure GPIO pin(s)
+	 * + Mode in GPIOx_MODER
+	 * + For output/AF mode: output type in GPIOx_OTYPER and output speed GPIOx_OSPEEDR
+	 * + Pull-up/pull-down activation in GPIOx_PUPDR
+	 * + For AF mode: alternation function in GPIOx_AFRL or GPIOx_AFRH
+	 */
+	*RCC_AHBENR |= 0b1 << 17; // Enable clock for GPIOA
+	*GPIOA_MODER |= (0b10 << 4) | (0b10 << 6) ; // select alternate function mode for PA2 and PA3 pin
 	/* To enable USART on PA2 and PA3, select AF1 (refer Alternate functions table in datasheet) */
 	*GPIOA_AFRL |= (0b0001 << 8) | (0b0001 << 12); // Set AFSEL9[3:0] and AFSEL10[3:0] bits as 0x01
 
-
-	/* Configure USART */
-	*RCC_APB2ENR |= 1 << 14; // Enable clock for USART1
-	/* Default settings USART are
-	 * - 8 data bits
-	 * - parity control disabled
-	 * - Oversampling by 16 mode
-	 * - 1 stop bit
+	/*
+	 * 2. Configure USART
+	 * - Step 1: Enable clock for USART
+	 * - Step 2: Configure USART
+	 * + Baud rate
+	 * + Word length
+	 * + Number of stop bit
+	 * + Oversampling mode
+	 * + Parity control activation
+	 * ...
+	 * - Step 3: Enable transmission, reception if needed
+	 * - Step 4: Enable USART
+	 *
+	 * [Notes]
+	 * - Default settings USART are:
+	 * + Word length = 8 data bits
+	 * + 1 stop bit
+	 * + Oversampling by 16
+	 * + parity control disabled
 	 */
+	*RCC_APB2ENR |= 0b1 << 14; // Enable clock for USART1
 
 	/* When select oversampling by 16, BRR = USARTDIV = f(CK) / Tx/Rx baud */
-	*USART1_BRR = 833; // (8000000/9600) Desired baud rate is 9600
-	*USART1_CR1 = (1 << 3) | (1 << 0); // Enable transmission and USART
+	*USART1_BRR = 8000000/9600; // Default baud rate is 8000000; desired baud rate is 9600
+	*USART1_CR1 = (0b1 << 3) | (0b1 << 2) | (0b1 << 0); // Enable transmission, reception and USART
 	
 	/* Send string "Hello" via USART */
 	for(int i = 0; i < 5; i++)
 	{
 		while(!(*USART1_ISR & (1 << 7))); // Check TXE flag if Transmit data register is empty
 		*USART1_TDR = msg[i];
+	}
+
+	while(1)
+	{
+
+		if((*USART1_ISR & (1 << 5))) // Check if data has been received and can be read via RXNE flag
+		{
+			receivedData = (char)(*USART1_RDR);
+
+			/* print out the receive data */
+			while(!(*USART1_ISR & (1 << 7))); // Check TXE flag if Transmit data register is empty
+			*USART1_TDR = receivedData;
+		}
 	}
 #endif /* SAMPLE3_USART */
 
