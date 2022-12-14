@@ -9,6 +9,8 @@
  * ------------------------------ REVISION HISTORY -----------------------------
  * Dec 10, 2022 - Updated file template
  *              - Added GPIO sample - LED blinking
+ * Dec 14, 2022 - Updated comments for GPIO sample
+ *              - Added GPIO external interrupt sample
  * -----------------------------------------------------------------------------
  */
 
@@ -20,7 +22,8 @@
 /*******************************************************************************
  * 2. Object-like Macros
  ******************************************************************************/
-#define SAMPLE_GPIO
+//#define SAMPLE1_GPIO
+#define SAMPLE2_GPIO_EXTI
 
 /*******************************************************************************
  * 3. Function-like Macros
@@ -37,47 +40,144 @@ typedef struct
 /*******************************************************************************
  * 5. Global, Static, Constant, Extern Variables and Extern Functions
  ******************************************************************************/
+GPIO_PortPin LED = {GPIOA, GPIO_PIN_4};
+GPIO_PortPin Button1 = {GPIOA, GPIO_PIN_1};
+GPIO_PortPin Button2 = {GPIOA, GPIO_PIN_2};
+
 void SystemClock_Config(void);
 
 /*******************************************************************************
  * 6. Function Definitions
  ******************************************************************************/
 /**
+  * @brief  EXTI0_1 interrupt handler
+  */
+void EXTI0_1_IRQHandler(void)
+{
+	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_1); // PA1: GPIO_PIN_1
+	HAL_GPIO_WritePin(LED.Port, LED.Pin, GPIO_PIN_SET); // Turn LED on
+}
+
+/**
+  * @brief  EXTI1_2 interrupt handler
+  */
+void EXTI2_3_IRQHandler(void)
+{
+	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_2); // PA2: GPIO_PIN_2
+	HAL_GPIO_WritePin(LED.Port, LED.Pin, GPIO_PIN_RESET); // Turn LED off
+}
+
+/**
   * @brief  The application entry point.
   * @retval int
   */
 int main(void)
 {
-  GPIO_PortPin LEDPin = {GPIOA, GPIO_PIN_4};
   HAL_Init(); // Reset of all peripherals, Initializes the Flash interface and the Systick
   SystemClock_Config(); // Configure the system clock
 
-  /**
-    * GPIO sample
-    */
-#ifdef  SAMPLE_GPIO
-  __GPIOA_CLK_ENABLE();
+#ifdef  SAMPLE1_GPIO
+	/*
+	 * 1. Configure GPIO pin(s): LED - PA4
+	 * - Step 1: Enable clock for GPIO port in RCC (Reset and Clock Control) register
+	 * - Step 2: Configure GPIO pin(s)
+	 * + Mode in GPIOx_MODER
+	 * + For output/AF mode: output type in GPIOx_OTYPER and output speed GPIOx_OSPEEDR
+	 * + Pull-up/pull-down activation in GPIOx_PUPDR
+	 * + For AF mode: alternation function in GPIOx_AFRL or GPIOx_AFRH
+	 */
+	__GPIOA_CLK_ENABLE(); // Enable clock for GPIOA
 
-  GPIO_InitTypeDef gpioStruct = {0};
-  gpioStruct.Pin = GPIO_PIN_4; //
-  gpioStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  gpioStruct.Pull = GPIO_NOPULL;
-  gpioStruct.Speed = GPIO_SPEED_FREQ_LOW;
-//  gpioStruct.Alternate = ;
-
-  HAL_GPIO_Init(LEDPin.Port, &gpioStruct);
+	/*
+	 * Configure the LED pin (PA4) as output,
+	 * and the rest settings as default (push-pull and low speed output, no pull-up/pull-down activated)
+	 */
+	GPIO_InitTypeDef gpioStruct = {0};
+	gpioStruct.Pin = LED.Pin;
+	gpioStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	gpioStruct.Pull = GPIO_NOPULL;
+	gpioStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(LED.Port, &gpioStruct);
 
   while(1)
   {
-    HAL_GPIO_TogglePin(LEDPin.Port, LEDPin.Pin);
-    HAL_Delay(1000); // Delay 1000ms
+    HAL_GPIO_TogglePin(LED.Port, LED.Pin);
+    HAL_Delay(1000); // Delay 1000 ticks
   }
-#endif /* SAMPLE_GPIO */
+#endif /* SAMPLE1_GPIO */
 
-  while(1)
-  {
+#ifdef  SAMPLE2_GPIO_EXTI
+	/*
+	 * 1. Configure GPIO pin(s): LED - PA4, Button1 - PA1, Button2 - PA2
+	 * - Step 1: Enable clock for GPIO port in RCC (Reset and Clock Control) register
+	 * - Step 2: Configure GPIO pin(s)
+	 * + Mode in GPIOx_MODER
+	 * + For output/AF mode: output type in GPIOx_OTYPER and output speed GPIOx_OSPEEDR
+	 * + Pull-up/pull-down activation in GPIOx_PUPDR
+	 * + For AF mode: alternation function in GPIOx_AFRL or GPIOx_AFRH
+	 */
+	__GPIOA_CLK_ENABLE(); // Enable clock for GPIOA
 
-  }
+	/*
+	 * Configure the LED pin (PA4) as output,
+	 * and the rest settings as default (push-pull and low speed output, no pull-up/pull-down activated)
+	 */
+	GPIO_InitTypeDef gpioStruct = {0};
+	gpioStruct.Pin = LED.Pin;
+	gpioStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	gpioStruct.Pull = GPIO_NOPULL;
+	gpioStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(LED.Port, &gpioStruct);
+
+	/*
+	 * Configure the PA1 and PA2 as pull-up input.
+	 */
+	gpioStruct.Pin = Button1.Pin | Button2.Pin;
+	gpioStruct.Mode = GPIO_MODE_INPUT;
+	gpioStruct.Pull = GPIO_PULLUP;
+	HAL_GPIO_Init(Button1.Port, &gpioStruct); // Button1 and Button2 both locate on GPIOA
+
+	/*
+	 * 2. Configure EXTI
+	 * - Step 1: Enable clock for SYSCFG
+	 * - Step 1.2: Select 1 GPIO line of EXTIx[3:0] bits in SYSCFG_EXTICRx register
+	 * - Step 2: For interrupt, configure interrupt mask in EXTI_IMR register
+	 * - Step 3: Select interrupt trigger type (falling trigger OR/AND rising trigger) in EXTI_RTSR and EXTI_FTSR
+	 *
+	 * [Notes]:
+	 * - CMSIS libraries also support configure EXTI by calling HAL_GPIO_Init() function
+	 *  with Mode of GPIO_MODE_IT_FALLING/GPIO_MODE_IT_RISING/GPIO_MODE_IT_RISING_FALLING.
+	 *  Below lines of code just clarify that process in HAL_GPIO_Init().
+	 */
+	__HAL_RCC_SYSCFG_CLK_ENABLE(); // Enable SYSCFG clock
+	/* PA1 and PA2 are default selections on EXTI1[3:0] and EXTI2[3:0] of SYSCFG_EXTICR1 register */
+	EXTI->IMR |= (0b1 << 1) | (0b1 << 2);
+	EXTI->FTSR |= (0b1 << 1) | (0b1 << 2);
+
+
+	/*
+	 * 3. Configure priority and enable interrupt line
+	 * - Step 1: Set priority for interrupt line
+	 * - Step 2: Enable interrupt line
+	 *
+	 * [Notes]:
+	 * - Some GPIO external interrupts are grouped into one line. In STM32F030F4P6, there are
+	 * three line group for GPIO pins:
+	 * + EXTI Line[1:0] for pin 0 to pin 1
+	 * + EXTI Line[3:2] for pin 2 to pin 3
+	 * + EXTI Line[15:4] for pin 4 to pin 15
+	 * In each group, interrupt occurs when at least one pin member got the external signal
+	 */
+	  HAL_NVIC_SetPriority(EXTI0_1_IRQn, 3, 0);
+	  HAL_NVIC_EnableIRQ(EXTI0_1_IRQn);
+
+	  HAL_NVIC_SetPriority(EXTI2_3_IRQn, 5, 0);
+	  HAL_NVIC_EnableIRQ(EXTI2_3_IRQn);
+	while(1)
+	{
+
+	}
+#endif /* SAMPLE2_GPIO_EXTI */
 }
 
 /**
