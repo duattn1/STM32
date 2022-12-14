@@ -15,6 +15,7 @@
  *              a new header file (stm32f030f4p6.h)
  *              - Added GPIO external interrupt sample
  *              - Updated USART sample (polling mode)
+ *              - Added USART sample with reception interrupt
  * -----------------------------------------------------------------------------
  */
 
@@ -30,7 +31,8 @@
 /* Peripheral sample enable */
 //#define SAMPLE1_GPIO
 //#define SAMPLE2_GPIO_EXTI
-#define SAMPLE3_USART_POLLING
+//#define SAMPLE3_USART_POLLING
+#define SAMPLE3A_USART_INTERRUPT
 
 /*******************************************************************************
  * 3. Function-like Macros
@@ -45,8 +47,9 @@
  ******************************************************************************/
 int main(void);
 void delay(uint32_t count);
-void EXTI0_1_ISR(void);
-void EXTI2_3_ISR(void);
+void EXTI0_1_Handler(void);
+void EXTI2_3_Handler(void);
+void USART1_Handler(void);
 
 /* Minimal vector table */
 uint32_t *vector_table[] __attribute__((section(".isr_vector"))) = {
@@ -71,26 +74,62 @@ uint32_t *vector_table[] __attribute__((section(".isr_vector"))) = {
 	(uint32_t *)0,				// RTC interrupt ISR
 	(uint32_t *)0,				// FLASH interrupt ISR
 	(uint32_t *)0, 				// RCC interrupt ISR
-	(uint32_t *)EXTI0_1_ISR,	// EXTI0_1 interrupt ISR
-	(uint32_t *)EXTI2_3_ISR		// EXTI2_3 interrupt ISR
-	/* and the rest , bla bla */
+	(uint32_t *)EXTI0_1_Handler,	// EXTI0_1 interrupt ISR
+	(uint32_t *)EXTI2_3_Handler,	// EXTI2_3 interrupt ISR
+	(uint32_t *)0,				// EXTI4_15 interrupt ISR
+	(uint32_t *)0,				// <Reserved>
+	(uint32_t *)0,				// DMA_CH1 interrupt ISR
+	(uint32_t *)0,				// DMA_CH2_3 interrupt ISR
+	(uint32_t *)0,				// DMA_CH4_5 interrupt ISR
+	(uint32_t *)0,				// ADC interrupt ISR
+	(uint32_t *)0,				// TIM1_BRK_UP_TRG_COM interrupt ISR
+	(uint32_t *)0,				// TIM1_CC interrupt ISR
+	(uint32_t *)0,				// <Reserved>
+	(uint32_t *)0,				// TIM3 interrupt ISR
+	(uint32_t *)0,				// <Reserved> / TIM6 interrupt ISR
+	(uint32_t *)0,				// <Reserved>
+	(uint32_t *)0,				// TIM14 interrupt ISR
+	(uint32_t *)0,				// TIM15 interrupt ISR
+	(uint32_t *)0,				// TIM16 interrupt ISR
+	(uint32_t *)0,				// TIM17 interrupt ISR
+	(uint32_t *)0,				// I2C1 interrupt ISR
+	(uint32_t *)0,				// I2C2 interrupt ISR
+	(uint32_t *)0,				// SPI1 interrupt ISR
+	(uint32_t *)0,				// SPI2 interrupt ISR
+	(uint32_t *)USART1_Handler,	// USART1 interrupt ISR
+	(uint32_t *)0,				// USART2 interrupt ISR
+	(uint32_t *)0,				// USART3_4_5_6 interrupt ISR
+	(uint32_t *)0,				// Reserved
+	(uint32_t *)0,				// USB interrupt ISR
+
 };
 
 /*******************************************************************************
  * 6. Function Definitions
  ******************************************************************************/
-void EXTI0_1_ISR(void)
+void EXTI0_1_Handler(void)
 {
 	/* Interrupt handler for EXTI0_1 */
 	*EXTI_PR |= 0b1 << 1; // Clear interrupt flag on PA1 (line 1). Flag is cleared by writing a 1 to the bit
 	*GPIOA_BSRR |= 0b1 << 4; // Set LED pin (PA4)
 }
 
-void EXTI2_3_ISR(void)
+void EXTI2_3_Handler(void)
 {
 	/* Interrupt handler for EXTI2_3 */
 	*EXTI_PR |= 0b1 << 2; // Clear interrupt flag on PA2 (line 2). Flag is cleared by writing a 1 to the bit
 	*GPIOA_BRR |= 0b1 << 4; // Reset LED pin (PA4)
+}
+
+void USART1_Handler(void)
+{
+	/* Interrupt handler for USART1 */
+	char receivedData = 0;
+	receivedData = (char)(*USART1_RDR);
+
+	/* print out the receive data */
+	while(!(*USART1_ISR & (1 << 7))); // Check TXE flag if Transmit data register is empty
+	*USART1_TDR = receivedData;
 }
 
 /**
@@ -161,7 +200,7 @@ int main(void)
 	*EXTI_FTSR |= (0b1 << 1) | (0b1 << 2);
 
 	/*
-	 * 3. Enable external interrupt for PA1 and PA2
+	 * 3. In NVIC register, enable external interrupt for PA1 and PA2
 	 * - Step 1: Set priority for interrupt line
 	 * - Step 2: Enable interrupt line
 	 *
@@ -183,7 +222,7 @@ int main(void)
 	 * - (0b11111: the mask for max number of STM32F030F4P6 interrupt lines)
 	 * - When enable an interrupt in NVIC_ISER, the corresponding bit in NVIC_ICER and NVIC_ISPR is set to 1 to
 	 */
-	*NVIC_ISER |= 0b1 << (5 & 0b11111); // 5: position of EXTI0_1 interrupt
+	*NVIC_ISER |= 0b1 << (5 & 0b11111); // 5: position of EXTI0_1 interrupt (Refer Table 32. Vector table in Reference Manual)
 	*NVIC_ISER |= 0b1 << (6 & 0b11111); // 6: position of EXTI2_3 interrupt
 
 	while(1)
@@ -256,6 +295,48 @@ int main(void)
 		}
 	}
 #endif /* SAMPLE3_USART */
+
+#ifdef  SAMPLE3A_USART_INTERRUPT
+
+	char msg[] = "Hello";
+
+	/*
+	 * The the same steps as SAMPLE3_USART to configure TX, RX pin and USART1
+	 */
+	*RCC_AHBENR |= 0b1 << 17; // Enable clock for GPIOA
+	*GPIOA_MODER |= (0b10 << 4) | (0b10 << 6) ; // select alternate function mode for PA2 and PA3 pin
+	/* To enable USART on PA2 and PA3, select AF1 (refer Alternate functions table in datasheet) */
+	*GPIOA_AFRL |= (0b0001 << 8) | (0b0001 << 12); // Set AFSEL9[3:0] and AFSEL10[3:0] bits as 0x01
+
+	*RCC_APB2ENR |= 0b1 << 14; // Enable clock for USART1
+
+	/* When select oversampling by 16, BRR = USARTDIV = f(CK) / Tx/Rx baud */
+	*USART1_BRR = 8000000/9600; // Default baud rate is 8000000; desired baud rate is 9600
+	*USART1_CR1 |= (0b1 << 3) | (0b1 << 2) | (0b1 << 0); // Enable transmission, reception and USART
+	/**********/
+	*USART1_CR1 |= (0b1 << 5); // Enable reception interrupt via RXNEIE bit
+
+	/*
+	 * 3. In NVIC register, set priority for USART1 and enable it
+	 */
+
+	/* Set priority for USART1 interrupt. Default priority is 0 */
+
+	/* Enable USART1 interrupt */
+	*NVIC_ISER |= 0b1 << (27 & 0b11111); // 27: position of USART1 interrupt (Refer Table 32. Vector table in Reference Manual)
+
+	/* Send string "Hello" via USART */
+	for(int i = 0; i < 5; i++)
+	{
+		while(!(*USART1_ISR & (1 << 7))); // Check TXE flag if Transmit data register is empty
+		*USART1_TDR = msg[i];
+	}
+
+	while(1)
+	{
+
+	}
+#endif /* SAMPLE3A_USART_INTERRUPT */
 
 }
 
