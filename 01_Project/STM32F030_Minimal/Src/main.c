@@ -16,6 +16,7 @@
  *              - Added GPIO external interrupt sample
  *              - Updated USART sample (polling mode)
  *              - Added USART sample with reception interrupt
+ *              - Added IWDG sample
  * -----------------------------------------------------------------------------
  */
 
@@ -32,7 +33,8 @@
 //#define SAMPLE1_GPIO
 //#define SAMPLE2_GPIO_EXTI
 //#define SAMPLE3_USART_POLLING
-#define SAMPLE3A_USART_INTERRUPT
+//#define SAMPLE3A_USART_INTERRUPT
+#define SAMPLE4_IWDG
 
 /*******************************************************************************
  * 3. Function-like Macros
@@ -109,20 +111,29 @@ uint32_t *vector_table[] __attribute__((section(".isr_vector"))) = {
  ******************************************************************************/
 void EXTI0_1_Handler(void)
 {
+#ifdef  SAMPLE2_GPIO_EXTI
 	/* Interrupt handler for EXTI0_1 */
 	*EXTI_PR |= 0b1 << 1; // Clear interrupt flag on PA1 (line 1). Flag is cleared by writing a 1 to the bit
 	*GPIOA_BSRR |= 0b1 << 4; // Set LED pin (PA4)
+#endif /* SAMPLE2_GPIO_EXTI */
+
+#ifdef  SAMPLE4_IWDG
+	while(1); // trap MCU into a infinite loop, then IWDG will force the MCU reset
+#endif /* SAMPLE4_IWDG */
 }
 
 void EXTI2_3_Handler(void)
 {
+#ifdef  SAMPLE2_GPIO_EXTI
 	/* Interrupt handler for EXTI2_3 */
 	*EXTI_PR |= 0b1 << 2; // Clear interrupt flag on PA2 (line 2). Flag is cleared by writing a 1 to the bit
 	*GPIOA_BRR |= 0b1 << 4; // Reset LED pin (PA4)
+#endif /* SAMPLE2_GPIO_EXTI */
 }
 
 void USART1_Handler(void)
 {
+#ifdef  SAMPLE3A_USART_INTERRUPT
 	/* Interrupt handler for USART1 */
 	char receivedData = 0;
 	receivedData = (char)(*USART1_RDR);
@@ -130,6 +141,7 @@ void USART1_Handler(void)
 	/* print out the receive data */
 	while(!(*USART1_ISR & (1 << 7))); // Check TXE flag if Transmit data register is empty
 	*USART1_TDR = receivedData;
+#endif /* SAMPLE3A_USART_INTERRUPT */
 }
 
 /**
@@ -183,7 +195,7 @@ int main(void)
 
 	/*
 	 * Configure PA1 and PA2 as pull-up input.
-	 * Default PA1 and PA2 are input.
+	 * By default, PA1 and PA2 are input.
 	 */
 	*GPIOA_PUPDR |= (0b01 << 2) | (0b01 << 4); // Select pull-up for PUPDR1[1:0] and PUPDR2[1:0]
 
@@ -301,7 +313,7 @@ int main(void)
 	char msg[] = "Hello";
 
 	/*
-	 * The the same steps as SAMPLE3_USART to configure TX, RX pin and USART1
+	 * Do the same steps as SAMPLE3_USART to configure TX, RX pin and USART1
 	 */
 	*RCC_AHBENR |= 0b1 << 17; // Enable clock for GPIOA
 	*GPIOA_MODER |= (0b10 << 4) | (0b10 << 6) ; // select alternate function mode for PA2 and PA3 pin
@@ -313,7 +325,7 @@ int main(void)
 	/* When select oversampling by 16, BRR = USARTDIV = f(CK) / Tx/Rx baud */
 	*USART1_BRR = 8000000/9600; // Default baud rate is 8000000; desired baud rate is 9600
 	*USART1_CR1 |= (0b1 << 3) | (0b1 << 2) | (0b1 << 0); // Enable transmission, reception and USART
-	/**********/
+	/********************/
 	*USART1_CR1 |= (0b1 << 5); // Enable reception interrupt via RXNEIE bit
 
 	/*
@@ -338,6 +350,58 @@ int main(void)
 	}
 #endif /* SAMPLE3A_USART_INTERRUPT */
 
+#ifdef  SAMPLE4_IWDG
+	/*
+	 * SCENARIO:
+	 * LED blinking repeatedly. If the button is pressed, MCU will be trapped into a infinite loop.
+	 * In that case, IWDG will force the MCU restart.
+	 */
+	/********************/
+	/*
+	 * Do the same steps as SAMPLE2_GPIO_EXTI to configure LED - PA4, Button1 - PA1
+	 */
+	*RCC_AHBENR |= 0b1 << 17; // Enable clock for GPIOA
+	*GPIOA_MODER |= 0b1 << 8; // Configure the LED pin (PA4) as push-pull and low speed output
+
+	/* Configure PA1 as pull-up input. By default, PA1 is input */
+	*GPIOA_PUPDR |= 0b01 << 2; // Select pull-up for PUPDR1[1:0] and PUPDR2[1:0]
+
+	/* Configure EXTI */
+	*RCC_APB2ENR |= 0b1 << 0; // Enable clock for SYSCFG
+	/* By default, PA1 is selected on EXTI1[3:0] of SYSCFG_EXTICR1 register */
+	*EXTI_IMR |= (0b1 << 1);
+	*EXTI_FTSR |= (0b1 << 1);
+	/* Set priority for EXTI0_1 (PA1). Default priority is 0 */
+	*NVIC_ISER |= 0b1 << (5 & 0b11111); // Enable EXTI0_1 interrupt in NVIC
+	/********************/
+
+	/*
+	 * Configure IWDG
+	 * - Step 1: Enable the IWDG by writing 0x0000CCCC to IWDG_KR register
+	 * - Step 2: Enable IWDG register access by writing 0x00005555 to IWDG_KR register
+	 * - Step 3: Set IWDG prescaler
+	 * - Step 4: Set counter reload value
+	 * - Step 5: Wait for the registers to be updated (IWDG_SR = 0x00000000)
+	 * [Notes]
+	 * - Refresh the counter value by writing 0x0000AAAA to IWDG_KR register
+	 * to avoid MCU reset whenever system is not responding
+	 */
+	*IWDG_KR = 0x0000CCCC; // Enable the IWDG
+	*IWDG_KR = 0x00005555; // Enable IWDG register access
+	*IWDG_PR = 0b110; // divider/256
+	*IWDG_RLR = 312; //
+	while (*IWDG_SR); // Wait for the registers to be updated
+
+	while(1)
+	{
+		*GPIOA_BSRR |= 0b1 << 4; // Set PA4: turn LED on
+		delay(500000); // Delay 500000 ticks
+		*GPIOA_BRR |= 0b1 << 4; // Reset PA4: turn LED off
+		delay(500000);
+		*IWDG_KR = 0x0000AAAA; // Reset IWDG counter
+	}
+
+#endif /* SAMPLE4_IWDG */
 }
 
 /**

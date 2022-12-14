@@ -77,6 +77,14 @@
 #define GPIOA_AFRH		((uint32_t*)(GPIOA_BASE + 0x24))
 #define GPIOA_BRR		((uint32_t*)(GPIOA_BASE + 0x28))
 
+/* IWDG address  */
+#define IWDG_BASE		(APBPERIPH_BASE + 0x00003000) // 0x4000 3000
+#define IWDG_KR			((uint32_t*)(IWDG_BASE + 0x00))
+#define IWDG_PR			((uint32_t*)(IWDG_BASE + 0x04))
+#define IWDG_RLR		((uint32_t*)(IWDG_BASE + 0x08))
+#define IWDG_SR			((uint32_t*)(IWDG_BASE + 0x0C))
+#define IWDG_WINR		((uint32_t*)(IWDG_BASE + 0x10))
+
 /* USART peripheral addresses */
 #define USART1_BASE		(APBPERIPH_BASE + 0x00013800) // 0x4001 3800
 #define USART1_CR1		((uint32_t*)(USART1_BASE + 0x00))
