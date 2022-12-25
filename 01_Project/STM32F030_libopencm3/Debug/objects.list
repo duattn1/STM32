@@ -1,0 +1,4 @@
+"./Src/main.o"
+"./libopencm3/lib/stm32/common/gpio_common_all.o"
+"./libopencm3/lib/stm32/common/gpio_common_f0234.o"
+"./libopencm3/lib/stm32/common/rcc_common_all.o"
